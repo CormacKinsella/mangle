@@ -9,10 +9,12 @@ version = "0.1.0"
 rust = ">=1.100.0,<1.101"
 bcftools = ">=1.25,<2"
 dnadotplot = ">=0.1.4,<0.2"
+cargo-audit = ">=0.22.1,<0.23"
 
 [tasks]
 build = "cargo build --release"
 test = "cargo test"
+audit = "cargo audit"
 mangle = { cmd = "target/release/mangle", depends-on = ["build"], description = "Build if needed, then run mangle. Usage: pixi run mangle -s <spec.tsv> <input.fasta>" }
 
 [tasks.plotspecific]
