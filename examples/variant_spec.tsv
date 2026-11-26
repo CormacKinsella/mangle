@@ -1,0 +1,4 @@
+id	type	length	parent
+var1	inv	1000	.
+var2	del	400	var1
+var3	cnv	15	.	5

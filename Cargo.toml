@@ -1,0 +1,11 @@
+[package]
+name = "mangle"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.105"
+clap = { version = "4.6.10", features = ["derive"] }
+md5 = "0.8.1"
+rand = "0.8"
+rand_chacha = "0.3"

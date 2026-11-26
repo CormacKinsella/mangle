@@ -1,0 +1,4 @@
+target/
+outputs/
+.pixi/
+plots/

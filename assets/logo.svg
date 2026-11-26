@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 160" width="480" height="160" role="img" aria-label="mangle">
+  <style>
+    .ink{fill:#5fb3a8}
+    .ink-s{stroke:#5fb3a8}
+  </style>
+  <title>mangle</title>
+  <!-- dotplot icon: the diagonal is reference vs. product; the red block is an inversion -->
+  <rect x="24" y="24" width="112" height="112" rx="14" fill="none" class="ink-s" stroke-width="5"/>
+  <g fill="none" stroke-width="7" stroke-linecap="round">
+    <path d="M40 120 L62 98" class="ink-s"/>
+    <path d="M62 62 L98 98" stroke="#f2a541"/>
+    <path d="M98 62 L120 40" class="ink-s"/>
+  </g>
+  <text x="164" y="98" font-family="'Inter','Helvetica Neue',Arial,sans-serif" font-size="52" font-weight="700" letter-spacing="-1" class="ink">mangle</text>
+</svg>
