@@ -1,9 +1,8 @@
-<!-- logo -->
-<img src="assets/logo.svg" alt="mangle dotplot logo" width="320">
-
 [![Pixi Badge](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json)](https://pixi.sh)
 [![Rust 1.100](https://img.shields.io/badge/rust-1.100-orange?logo=rust)](https://www.rust-lang.org)
 
+<!-- logo -->
+<img src="assets/logo.svg" alt="mangle dotplot logo" width="480">
 
 ## At a glance
 
