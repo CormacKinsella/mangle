@@ -15,7 +15,7 @@ for ((i = 0; i < n; i++)); do
     for ((j = i + 1; j < n; j++)); do
         a=$(basename "${files[i]}"); a=${a%.*}
         b=$(basename "${files[j]}"); b=${b%.*}
-        dnadotplot --revcompl --window "$window" -o "$outdir/${a}_vs_${b}.png" \
+        dnadotplot --revcompl --svg --window "$window" -o "$outdir/${a}_vs_${b}.svg" \
             -1 "${files[i]}" -2 "${files[j]}"
     done
 done
