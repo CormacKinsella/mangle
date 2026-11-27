@@ -123,3 +123,15 @@ fn cli_refuses_before_writing_anything() {
     assert!(out.join("original.fa").exists());
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+#[test]
+fn oversized_variants_are_rejected_regardless_of_seed() {
+    // growth = len for ins/dup, len x (copies-1) for cnv; limit 1 GB, cnv copies <= 500
+    assert!(parse_spec("a cnv 100m . 11\n").is_ok()); // exactly 1 GB
+    assert!(parse_spec("a cnv 100m . 12\n").is_err());
+    assert!(parse_spec("a cnv 10 . 501\n").is_err());
+    assert!(parse_spec("a ins 2g .\n").is_err());
+    assert!(parse_spec("a dup 2g .\n").is_err());
+    assert!(parse_spec("a ins 1k-2g .\n").is_err(), "the top of a range counts, so the seed can't matter");
+    assert!(parse_spec("a inv 5g .\n").is_ok(), "types that don't grow are not limited here");
+}

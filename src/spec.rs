@@ -176,6 +176,11 @@ pub fn parse_spec_warn(text: &str) -> Result<(Vec<VarSpec>, Vec<String>)> {
             }
             _ => {}
         }
+        let max_len = match len {
+            Len::Fixed(n) | Len::Range(_, n) => n,
+            Len::Unspecified => 1,
+        };
+        crate::limits::check_variant(kind, max_len, copies).with_context(|| format!("{}: variant '{id}'", at()))?;
         out.push(VarSpec { id, kind, len, parent, copies });
     }
 

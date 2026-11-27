@@ -8,7 +8,46 @@ use crate::apply::contig_len;
 use crate::io::Reference;
 use crate::plan::Plan;
 use crate::sets::OutSet;
+use crate::spec::Kind;
 use anyhow::{Result, bail};
+
+/// Most copies a `cnv` may have. Fixed: a sanity limit, not a tuning knob.
+pub const MAX_CNV_COPIES: usize = 500;
+/// Most bases a single variant may add to the sequence (decimal GB). Fixed, because each variant is built
+/// in memory; revisit if copies are ever streamed instead.
+pub const MAX_VARIANT_GROWTH: u64 = 1_000_000_000;
+
+/// Bases a variant adds to the sequence: `ins` and `dup` add their length, `cnv` adds `len x (copies-1)`.
+pub fn variant_growth(kind: Kind, len: usize, copies: usize) -> u64 {
+    match kind {
+        Kind::Ins | Kind::Dup => len as u64,
+        Kind::Cnv => (len as u64).saturating_mul(copies.saturating_sub(1) as u64),
+        _ => 0,
+    }
+}
+
+/// Reject a variant that is too big. `max_len` is the largest length it can take (the top of a range), so the
+/// result never depends on the seed. `copies` is as given in the catalogue (`None` = default).
+pub fn check_variant(kind: Kind, max_len: usize, copies: Option<usize>) -> Result<()> {
+    let copies = match kind {
+        Kind::Dup => 2,
+        Kind::Cnv => copies.unwrap_or(3),
+        _ => 1,
+    };
+    if kind == Kind::Cnv && copies > MAX_CNV_COPIES {
+        bail!("cnv copies must be <= {MAX_CNV_COPIES} (got {copies})");
+    }
+    let growth = variant_growth(kind, max_len, copies);
+    if growth > MAX_VARIANT_GROWTH {
+        bail!(
+            "{} would add up to {} to the sequence, over the per-variant limit of {}",
+            kind.name(),
+            human(growth),
+            human(MAX_VARIANT_GROWTH)
+        );
+    }
+    Ok(())
+}
 
 /// How the products will be written. Add fields here when output gets new dimensions.
 #[derive(Clone, Copy, Debug)]

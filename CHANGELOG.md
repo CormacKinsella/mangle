@@ -4,6 +4,7 @@
 
 ### Added
 - `--max_output_size` (default `10g`, suffixes `k/m/g`): mangle works out how large the total FASTA output will be before writing anything, and stops with a clear message if it is over the limit. It counts every sequence written, including the unchanged input (unless `--drop_input`) and the extra `all.fa` copy from `--combined`. The estimate is printed at run time and recorded in `mangle.log`.
+- Per-variant size limits: a `cnv` may have at most 500 copies, and no single variant (`ins`, `dup`, `cnv`) may add more than 1 GB to the sequence.
 - A test that pins the exact output for a fixed seed, so a dependency upgrade that changes what a seed produces is caught.
 - Tests for the size estimate (it matches the bytes actually written) and for the limit itself.
 

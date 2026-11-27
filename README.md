@@ -72,7 +72,7 @@ Column headers: `id type length parent [copies]`
 | `type` | Variant type (`snp` `ins` `del` `inv` `dup` `cnv`, long names like `inversion` work, and `snv` for `snp`) |
 | `length` | Variant length (exact or a range: `500`, `200-400`/`200..400`, suffixes `k/m/g`) |
 | `parent` | id of an enclosing variant, or `.`, `-`, `0`, `none` for top-level. Parents must be declared first; `snp` and `del` cannot be parents |
-| `copies` | total copy number of the region, applies to `cnv` only (default 3, minimum 2), `dup` is always 2 |
+| `copies` | total copy number of the region, applies to `cnv` only (default 3, minimum 2, maximum 500), `dup` is always 2 |
 
 What each type does: `snp` substitutes one base; `ins` inserts a random `ACGT` sequence of the given length; `del` removes
 the region; `inv` reverse-complements it; `dup` makes one extra tandem copy (2 copies in total); `cnv` makes `copies` tandem
@@ -111,6 +111,8 @@ var3  del        200     .
 ## Output size limit
 
 Before writing anything, mangle computes the exact size of the FASTA it is about to produce: every sequence in the chosen `--mode`, including the unchanged input unless `--drop_input` is set, and doubled when `--combined` also writes `all.fa`. If that exceeds `--max_output_size` (default `10g`, decimal `k/m/g` suffixes) it stops with an error and writes nothing. Raise the limit explicitly (e.g. `--max_output_size 200g`) when you really mean it. Truth files (BED, VCF, catalogue) are small and not counted. The estimate is printed when the run starts and saved in `mangle.log`.
+
+Separately, single variants are limited in how much they can add to the sequence, because each one is built in memory: `ins` and `dup` add their length, `cnv` adds length × (copies − 1), and the limit is 1 GB each (for a length range the top of the range is checked). These two limits (500 copies, 1 GB) are fixed.
 
 ## Outputs
 
