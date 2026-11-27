@@ -17,6 +17,9 @@ pub const MAX_CNV_COPIES: usize = 500;
 /// in memory; revisit if copies are ever streamed instead.
 pub const MAX_VARIANT_GROWTH: u64 = 1_000_000_000;
 
+/// Most variants (spec rows) in one run. Fixed: keeps placement fast. Revisit as rows x count once counts exist.
+pub const MAX_VARIANTS: usize = 100_000;
+
 /// Bases a variant adds to the sequence: `ins` and `dup` add their length, `cnv` adds `len x (copies-1)`.
 pub fn variant_growth(kind: Kind, len: usize, copies: usize) -> u64 {
     match kind {
@@ -102,4 +105,19 @@ pub fn human(b: u64) -> String {
         }
     }
     format!("{b} B")
+}
+
+/// Cheap up-front check that the top-level variants can theoretically fit on the reference, so an overcrowded run fails
+/// at once instead of after `MAX_TRIES` failed placements. Necessary, but not capable of stopping all "crowding" failures
+pub fn check_footprint(need: u64, refs: &Reference, min_gap: usize, n_top: usize) -> Result<()> {
+    let usable: u64 = refs.seqs.iter().flatten().filter(|b| !matches!(b, b'N' | b'n')).count() as u64;
+    let need = need.saturating_add((n_top as u64).saturating_mul(min_gap as u64));
+    if need > usable {
+        bail!(
+            "top-level variants need {} bp (including --min_gap) but the reference has only {} usable (non-N) bp",
+            need,
+            usable
+        );
+    }
+    Ok(())
 }

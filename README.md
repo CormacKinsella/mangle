@@ -112,7 +112,7 @@ var3  del        200     .
 
 Before writing anything, mangle computes the exact size of the FASTA it is about to produce: every sequence in the chosen `--mode`, including the unchanged input unless `--drop_input` is set, and doubled when `--combined` also writes `all.fa`. If that exceeds `--max_output_size` (default `10g`, decimal `k/m/g` suffixes) it stops with an error and writes nothing. Raise the limit explicitly (e.g. `--max_output_size 200g`) when you really mean it. Truth files (BED, VCF, catalogue) are small and not counted. The estimate is printed when the run starts and saved in `mangle.log`.
 
-Separately, single variants are limited in how much they can add to the sequence, because each one is built in memory: `ins` and `dup` add their length, `cnv` adds length × (copies − 1), and the limit is 1 GB each (for a length range the top of the range is checked). These two limits (500 copies, 1 GB) are fixed.
+Separately, single variants are limited in how much they can add to the sequence, because each one is built in memory: `ins` and `dup` add their length, `cnv` adds length × (copies − 1), and the limit is 1 GB each (for a length range the top of the range is checked). These two limits (500 copies, 1 GB) are fixed. A spec may also have at most 100,000 variants, and before placing anything mangle checks that the top-level variants (plus `--min_gap`) could fit in the non-N bases of the reference at all.
 
 ## Outputs
 

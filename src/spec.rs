@@ -107,6 +107,7 @@ pub fn parse_spec_warn(text: &str) -> Result<(Vec<VarSpec>, Vec<String>)> {
     let mut warnings: Vec<String> = Vec::new();
     let mut out: Vec<VarSpec> = Vec::new();
     let mut seen_row = false;
+    let mut ids: std::collections::HashSet<String> = std::collections::HashSet::new();
     for (ln, line) in text.lines().enumerate() {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
@@ -133,7 +134,10 @@ pub fn parse_spec_warn(text: &str) -> Result<(Vec<VarSpec>, Vec<String>)> {
         if id == "original" {
             bail!("{}: 'original' is reserved for the unmodified sequence", at());
         }
-        if out.iter().any(|v| v.id == id) {
+        if out.len() >= crate::limits::MAX_VARIANTS {
+            bail!("{}: more than {} variants in the spec", at(), crate::limits::MAX_VARIANTS);
+        }
+        if !ids.insert(id.clone()) {
             bail!("{}: duplicate id '{id}'", at());
         }
         let kind = Kind::parse(f[1]).with_context(|| format!("{}: unknown type '{}'", at(), f[1]))?;

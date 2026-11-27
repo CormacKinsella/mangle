@@ -137,6 +137,10 @@ pub fn resolve(specs: &[VarSpec], refs: &Reference, seed: u64, min_gap: usize) -
         }
     }
 
+    let tops = nodes.iter().filter(|n| n.parent.is_none());
+    let need: u64 = tops.clone().map(|n| n.span().max(1) as u64).sum();
+    crate::limits::check_footprint(need, refs, min_gap, tops.count())?;
+
     // Pass 1: top-level variants, placed on the reference without overlap.
     let mut footprints: Vec<(usize, usize, usize)> = Vec::new();
     for i in 0..nodes.len() {
