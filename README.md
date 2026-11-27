@@ -12,7 +12,7 @@ It simulates `SNPs`, `indels`, `inversions`, `tandem duplications`, and `CNVs` a
 
 Unlike many simulators that produce a single mutated sequence, `mangle` outputs a **family of related sequences** that are ready for graph construction.
 
-Note that each product is based on the full input, so output can be over `n + 1` sequences in size. Keep this in mind for large input files and/or many variants.
+Note that each product is based on the full input, so output can be over `n + 1` sequences in size. Keep this in mind for large input files and/or many variants. mangle estimates the total output size before writing anything and refuses to run above `--max_output_size` (default `10g`).
 
 ## Quick start
 
@@ -107,6 +107,10 @@ var3  del        200     .
 |---|---|
 | `cumulative` | `original`, `var1`, `var1+var2`, `var1+var2+var3` |
 | `single` | `original`, `var1`, `var1+var2`, `var3` |
+
+## Output size limit
+
+Before writing anything, mangle computes the exact size of the FASTA it is about to produce: every sequence in the chosen `--mode`, including the unchanged input unless `--drop_input` is set, and doubled when `--combined` also writes `all.fa`. If that exceeds `--max_output_size` (default `10g`, decimal `k/m/g` suffixes) it stops with an error and writes nothing. Raise the limit explicitly (e.g. `--max_output_size 200g`) when you really mean it. Truth files (BED, VCF, catalogue) are small and not counted. The estimate is printed when the run starts and saved in `mangle.log`.
 
 ## Outputs
 
@@ -243,6 +247,11 @@ Options:
           Minimum distance between top-level variants (bp)
           
           [default: 10]
+
+      --max_output_size <MAX_OUTPUT_SIZE>
+          Refuse to run if the FASTA output would exceed this size (suffixes k/m/g, decimal)
+          
+          [default: 10g]
 
       --line_width <LINE_WIDTH>
           FASTA line width

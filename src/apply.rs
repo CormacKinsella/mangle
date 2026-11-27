@@ -93,6 +93,32 @@ pub fn realise(plan: &Plan, refs: &Reference, active: &[bool], n: usize) -> Vec<
     }
 }
 
+/// Length of what [`realise`] would produce for node `n`, computed without building the sequence.
+/// Saturates instead of overflowing, so absurd inputs give a huge number rather than a panic.
+pub fn realised_len(plan: &Plan, active: &[bool], n: usize) -> usize {
+    let node = &plan.nodes[n];
+    let mut inner = node.len;
+    for &c in node.children.iter().filter(|&&c| active[c]) {
+        // a child replaces `span` bases of the parent's region with its own output
+        inner = inner.saturating_sub(plan.nodes[c].span()).saturating_add(realised_len(plan, active, c));
+    }
+    match node.kind {
+        Kind::Snp => 1,
+        Kind::Del => 0,
+        Kind::Ins | Kind::Inv => inner,
+        Kind::Dup | Kind::Cnv => node.len.saturating_mul(node.copies - 1).saturating_add(inner),
+    }
+}
+
+/// Length of one contig of the output defined by `active` (see [`render_contig`]).
+pub fn contig_len(plan: &Plan, refs: &Reference, active: &[bool], contig: usize) -> usize {
+    let mut len = refs.seqs[contig].len();
+    for i in (0..plan.nodes.len()).filter(|&i| active[i] && plan.nodes[i].parent.is_none() && plan.nodes[i].contig == contig) {
+        len = len.saturating_sub(plan.nodes[i].span()).saturating_add(realised_len(plan, active, i));
+    }
+    len
+}
+
 /// Stream one contig of the output defined by `active`, without materialising the whole contig.
 pub fn render_contig(plan: &Plan, refs: &Reference, active: &[bool], contig: usize, emit: &mut dyn FnMut(&[u8])) {
     let seq = &refs.seqs[contig];

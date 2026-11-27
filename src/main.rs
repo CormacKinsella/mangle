@@ -1,6 +1,7 @@
 use anyhow::{Context, Result, bail};
 use clap::Parser;
 use mangle::io::{FastaWriter, read_fasta};
+use mangle::limits::{self, OutputShape};
 use mangle::sets::{Mode, build_sets};
 use mangle::{apply, plan, spec, truth};
 use std::fs::{self, File};
@@ -54,9 +55,21 @@ struct Args {
     #[arg(long = "min_gap", alias = "min-gap", default_value_t = 10)]
     min_gap: usize,
 
+    /// Refuse to run if the FASTA output would exceed this size (suffixes k/m/g, decimal)
+    #[arg(long = "max_output_size", alias = "max-output-size", default_value = "10g", value_parser = parse_max_output)]
+    max_output_size: u64,
+
     /// FASTA line width
     #[arg(long = "line_width", alias = "line-width", default_value_t = 80)]
     line_width: usize,
+}
+
+fn parse_max_output(s: &str) -> Result<u64, String> {
+    match spec::parse_size(s) {
+        Ok(0) => Err("must be greater than 0".into()),
+        Ok(n) => Ok(n as u64),
+        Err(e) => Err(e.to_string()),
+    }
 }
 
 fn main() -> Result<()> {
@@ -90,6 +103,9 @@ fn main() -> Result<()> {
     if sets.is_empty() {
         bail!("nothing to output");
     }
+    // Size check before anything is written. One haplotype per product until ploidy/haplotype count exist.
+    let shape = OutputShape { haplotypes_per_product: 1, combined: a.combined, line_width: a.line_width };
+    let est_bytes = limits::check_output_size(&plan, &refs, &sets, &shape, a.max_output_size)?;
     fs::create_dir_all(&a.outdir)?;
 
     // The catalogue with every random choice resolved to concrete coordinates and alleles. Always written.
@@ -118,6 +134,8 @@ fn main() -> Result<()> {
         writeln!(l, "drop_input: {}", a.drop_input)?;
         writeln!(l, "min_gap: {}", a.min_gap)?;
         writeln!(l, "vcf: {}", a.vcf)?;
+        writeln!(l, "max_output_size: {}", a.max_output_size)?;
+        writeln!(l, "estimated_output_bytes: {est_bytes}")?;
         writeln!(l, "variants: {}", plan.nodes.len())?;
         writeln!(l, "products: {}", sets.iter().map(|s| s.name.as_str()).collect::<Vec<_>>().join(" "))?;
         for w in &warnings {
@@ -131,7 +149,13 @@ fn main() -> Result<()> {
         None
     };
 
-    eprintln!("seed {} | {} variants | {} output sequences", a.seed, plan.nodes.len(), sets.len());
+    eprintln!(
+        "seed {} | {} variants | {} output sequences | ~{}",
+        a.seed,
+        plan.nodes.len(),
+        sets.len(),
+        limits::human(est_bytes)
+    );
     for s in &sets {
         let mut outs: Vec<Box<dyn Write + '_>> =
             vec![Box::new(BufWriter::new(File::create(a.outdir.join(format!("{}.fa", s.name)))?))];

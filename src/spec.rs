@@ -67,7 +67,8 @@ pub struct VarSpec {
     pub copies: Option<usize>,
 }
 
-fn parse_size(s: &str) -> Result<usize> {
+/// Parse a size such as `500`, `20k`, `1_000` or `10g` (decimal suffixes k/m/g). Errors on overflow.
+pub fn parse_size(s: &str) -> Result<usize> {
     let s = s.replace('_', "");
     let (num, mult) = match s.chars().last() {
         Some('k') | Some('K') => (&s[..s.len() - 1], 1_000usize),
@@ -75,8 +76,8 @@ fn parse_size(s: &str) -> Result<usize> {
         Some('g') | Some('G') => (&s[..s.len() - 1], 1_000_000_000),
         _ => (&s[..], 1),
     };
-    let n: usize = num.parse().with_context(|| format!("bad length '{s}'"))?;
-    Ok(n * mult)
+    let n: usize = num.parse().with_context(|| format!("bad size '{s}'"))?;
+    n.checked_mul(mult).with_context(|| format!("size '{s}' is too large"))
 }
 
 fn parse_len(s: &str) -> Result<Len> {
