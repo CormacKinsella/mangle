@@ -12,7 +12,7 @@ It simulates `SNPs`, `indels`, `inversions`, `tandem duplications`, and `CNVs` a
 
 Unlike many simulators that produce a single mutated sequence, `mangle` outputs a **family of related sequences** that are ready for graph construction.
 
-Note that each product is based on the full input, so disk usage can be over `n + 1` sequences. Keep this in mind for large input files and/or many variants.
+Note that each product is based on the full input, so output can be over `n + 1` sequences in size. Keep this in mind for large input files and/or many variants.
 
 ## Quick start
 
@@ -72,7 +72,7 @@ Column headers: `id type length parent [copies]`
 | `type` | Variant type (`snp` `ins` `del` `inv` `dup` `cnv`, long names like `inversion` work, and `snv` for `snp`) |
 | `length` | Variant length (exact or a range: `500`, `200-400`/`200..400`, suffixes `k/m/g`) |
 | `parent` | id of an enclosing variant, or `.`, `-`, `0`, `none` for top-level. Parents must be declared first; `snp` and `del` cannot be parents |
-| `copies` | total copy number of the region, applies to `cnv` only (default 3, minimum 2). `dup` is always 2 |
+| `copies` | total copy number of the region, applies to `cnv` only (default 3, minimum 2), `dup` is always 2 |
 
 What each type does: `snp` substitutes one base; `ins` inserts a random `ACGT` sequence of the given length; `del` removes
 the region; `inv` reverse-complements it; `dup` makes one extra tandem copy (2 copies in total); `cnv` makes `copies` tandem
