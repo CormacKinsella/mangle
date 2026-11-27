@@ -11,14 +11,17 @@ use crate::sets::OutSet;
 use crate::spec::Kind;
 use anyhow::{Result, bail};
 
-/// Most copies a `cnv` may have. Fixed: a sanity limit, not a tuning knob.
+/// Most copies a `cnv` may have. Fixed value.
 pub const MAX_CNV_COPIES: usize = 500;
-/// Most bases a single variant may add to the sequence (decimal GB). Fixed, because each variant is built
+/// Most bases a single variant may add to the sequence (decimal GB). Fixed value, each variant is built
 /// in memory; revisit if copies are ever streamed instead.
 pub const MAX_VARIANT_GROWTH: u64 = 1_000_000_000;
 
-/// Most variants (spec rows) in one run. Fixed: keeps placement fast. Revisit as rows x count once counts exist.
+/// Most variants (spec rows) in one run. Fixed value, keeps placement fast. Revisit as rows x count once counts exist.
 pub const MAX_VARIANTS: usize = 100_000;
+
+/// Deepest nesting allowed (a top-level variant is level 1). Fixed value, because realise recurses once per level.
+pub const MAX_NEST_DEPTH: usize = 10;
 
 /// Bases a variant adds to the sequence: `ins` and `dup` add their length, `cnv` adds `len x (copies-1)`.
 pub fn variant_growth(kind: Kind, len: usize, copies: usize) -> u64 {

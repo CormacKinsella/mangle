@@ -6,6 +6,7 @@
 - `--max_output_size` (default `10g`, suffixes `k/m/g`): mangle works out how large the total FASTA output will be before writing anything, and stops with a clear message if it is over the limit. It counts every sequence written, including the unchanged input (unless `--drop_input`) and the extra `all.fa` copy from `--combined`. The estimate is printed at run time and recorded in `mangle.log`.
 - Per-variant size limits: a `cnv` may have at most 500 copies, and no single variant (`ins`, `dup`, `cnv`) may add more than 1 GB to the sequence.
 - A spec may have at most 100,000 variants. Duplicate-id checking is now fast for large specs.
+- Variant nesting is limited to 10 levels to avoid overflow issues (a top-level variant is level 1), checked when the spec is read
 - Quick up-front check that the top-level variants can theoretically fit on the reference (counting `--min_gap` and ignoring N), so a crowded run fails immediately instead of after thousands of failed placement tries.
 - Input FASTA lines longer than 2 GB are refused with a clear error instead of being read into memory (protects against non-FASTA files with no line breaks).
 - Input FASTA files with more than 1 million sequences are refused, and an empty record (a header with no sequence) is reported as soon as it is reached instead of after the whole file has been read.

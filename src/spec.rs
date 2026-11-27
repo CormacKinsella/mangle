@@ -190,6 +190,7 @@ pub fn parse_spec_warn(text: &str) -> Result<(Vec<VarSpec>, Vec<String>)> {
 
     let kinds: HashMap<&str, Kind> = out.iter().map(|v| (v.id.as_str(), v.kind)).collect();
     let pos: HashMap<&str, usize> = out.iter().enumerate().map(|(i, v)| (v.id.as_str(), i)).collect();
+    let mut depth: Vec<usize> = vec![1; out.len()]; // top-level = 1; parents precede children, so this is final
     for (i, v) in out.iter().enumerate() {
         if let Some(p) = &v.parent {
             let pi = *pos
@@ -197,6 +198,10 @@ pub fn parse_spec_warn(text: &str) -> Result<(Vec<VarSpec>, Vec<String>)> {
                 .with_context(|| format!("variant '{}': unknown parent '{p}'", v.id))?;
             if pi >= i {
                 bail!("variant '{}': parent '{p}' must be declared before it", v.id);
+            }
+            depth[i] = depth[pi] + 1;
+            if depth[i] > crate::limits::MAX_NEST_DEPTH {
+                bail!("variant '{}': nested {} levels deep, over the limit of {}", v.id, depth[i], crate::limits::MAX_NEST_DEPTH);
             }
             match kinds[p.as_str()] {
                 Kind::Snp | Kind::Del => bail!(
@@ -246,5 +251,18 @@ mod tests {
         assert!(parse_spec("a snp . .\nb inv 5 a\n").is_err());
         assert!(parse_spec("a del 10 .\nb snp . a\n").is_err());
         assert!(parse_spec("b inv 5 a\na inv 10 .\n").is_err());
+    }
+
+    #[test]
+    fn nesting_depth_is_capped() {
+        let chain = |n: usize| {
+            let mut t = String::from("v0 inv 1k .\n");
+            for i in 1..n {
+                t += &format!("v{i} inv 1k v{}\n", i - 1);
+            }
+            t
+        };
+        assert!(parse_spec(&chain(10)).is_ok());
+        assert!(parse_spec(&chain(11)).is_err());
     }
 }
