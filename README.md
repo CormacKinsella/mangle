@@ -53,11 +53,11 @@ Re-run the `cargo install` line after changing the source to update the installe
 The tool [dnadotplot](https://github.com/quadram-institute-bioscience/dnadotplot) is provided in the `pixi` environment along with tasks to run it.
 
 ```
-# all pairwise plots of the products in outputs/ -> plots/<A>_vs_<B>.png
+# all pairwise plots of the products in outputs/ -> plots/<A>_vs_<B>.svg
 pixi run plots [input_dir=outputs] [output_dir=plots] [window_size=7]
 
 # one pair; only the first record of each file is plotted
-pixi run plotspecific <a.fa> <b.fa> <out.png> [window]
+pixi run plotspecific <a.fa> <b.fa> <out.svg> [window]
 ```
 
 ## Variant catalogue
@@ -68,7 +68,7 @@ Column headers: `id type length parent [copies]`
 
 | column | meaning |
 |---|---|
-| `id` | Unique variant/product sequence identifier (`[A-Za-z0-9_.-]`, cannot be `original`) |
+| `id` | Unique variant/product sequence identifier (`[A-Za-z0-9_.-]`, cannot be `original` or `combined`, case only differences count as duplicates) |
 | `type` | Variant type (`snp` `ins` `del` `inv` `dup` `cnv`, long names like `inversion` work, and `snv` for `snp`) |
 | `length` | Variant length (exact or a range: `500`, `200-400`/`200..400`, suffixes `k/m/g`) |
 | `parent` | id of an enclosing variant, or `.`, `-`, `0`, `none` for top-level. Parents must be declared first; `snp` and `del` cannot be parents |
@@ -84,15 +84,15 @@ copies in total.
 
 ### `cumulative` (default)
 
-Cumulative addition of variants, in catalogue order. It outputs the unmodified input first, then the first catalogue line, e.g., `var1`, then `var1+var2`, then `var1+var2+var3`, etc.
+Cumulative addition of variants, in catalogue order. It outputs the unmodified input first, then a product with the first catalogue line (`var1`), then one with `var1,var2`, then `var1,var2,var3`, etc.
 
-For a catalogue of `n` variants you get `n` products (plus `original`).
+For a catalogue of `n` variants you get `n` products (plus the unmodified input, `product_0000`).
 
 ### `single`
 
 Each variant on its own, in catalogue order. Since a nested variant needs its parent, these outputs will contain all the respective ancestors (a child of a child includes both the parent and the grandparent). Siblings and unrelated top-level variants are not combined.
 
-For a catalogue of `n` variants you get `n` products (plus `original`).
+For a catalogue of `n` variants you get `n` products (plus the unmodified input, `product_0000`).
 
 #### Example
 
@@ -105,8 +105,8 @@ var3  del        200     .
 
 | `--mode` | sequences written |
 |---|---|
-| `cumulative` | `original`, `var1`, `var1+var2`, `var1+var2+var3` |
-| `single` | `original`, `var1`, `var1+var2`, `var3` |
+| `cumulative` | `product_0000` (unmodified), then products holding `var1`; `var1,var2`; `var1,var2,var3` |
+| `single` | `product_0000` (unmodified), then products holding `var1`; `var1,var2` (`var2` nested in `var1`); `var3` |
 
 ## Output size limit
 
@@ -118,12 +118,13 @@ Separately, single variants are limited in how much they can add to the sequence
 
 | file | when | contents |
 |---|---|---|
-| `NAME.fa` | always | one per product; the unmodified input is `original.fa` |
+| `PRODUCT.fa` | always | one per product (`product_0001.fa`, ...); the unmodified input is `product_0000.fa` |
+| `products.tsv` | always | which variants each product contains: `product`, `n_variants`, `length` (bp, all contigs) and the variant list. The list is ids (`variants` column) when every product has 20 or fewer variants, otherwise row numbers of `resolved_catalogue.tsv` as ranges such as `1-57,60` (`variant_rows` column). `pixi run product_variants [outdir] [product]` expands either form to one variant per line |
 | `resolved_catalogue.tsv` | always | your variant catalogue after the RNG has acted: one row per variant with its contig, position, length, parent, and for SNPs the ref/alt bases. This is the only file listing variants inside inserted sequence (`ins_offset`) |
 | `mangle.log` | always | exact command line, parameters, warnings, md5 of the variant catalogue |
 | `variants.bed` | always | every variant that has an original-reference coordinate, 0-based; insertions are zero-length. Variants inside inserted sequence are not listed |
-| `combined.fa` | only with `--combined` | every output sequence (including `original`, unless `--drop_input`) in one multi-sample FASTA |
-| `NAME.vcf` | only with `--vcf` | truth VCF for each product |
+| `combined.fa` | only with `--combined` | every output sequence (including `product_0000`, unless `--drop_input`) in one multi-sample FASTA |
+| `PRODUCT.vcf` | only with `--vcf` | truth VCF for each product |
 
 See "Sequence names" below for the FASTA record naming.
 
@@ -131,24 +132,18 @@ See "Sequence names" below for the FASTA record naming.
 
 Every FASTA record is named `PRODUCT#0#CONTIG` ([PanSN](https://github.com/pangenome/PanSN-spec)) for compatibility with graph building tools.
 
-* **PRODUCT** is `original` for the unmodified input, otherwise the ids of the variants it contains, in
-  catalogue order, joined with `+`.
+* **PRODUCT** is `product_0000` for the unmodified input, then `product_0001`, `product_0002`, ... in output order. Numbers are zero-padded to at least 4 digits.
 * **0** is the haplotype field. It is always `0` for now.
 * **CONTIG** is the input name up to the first space.
 
 | input header | product | output header |
 |---|---|---|
-| `>chr1 Homo sapiens chromosome 1` | the input | `>original#0#chr1` |
-| `>chr1 Homo sapiens chromosome 1` | `var1` | `>var1#0#chr1` |
-| `>scaffold_2` | `var1` + nested `var2` | `>var1+var2#0#scaffold_2` |
-| `>HG002#1#chr1` (already PanSN) | `var1` | `>var1#0#chr1` (only the last `#` field is kept) |
+| `>chr1 Homo sapiens chromosome 1` | the input | `>product_0000#0#chr1` |
+| `>chr1 Homo sapiens chromosome 1` | first product | `>product_0001#0#chr1` |
+| `>scaffold_2` | second product | `>product_0002#0#scaffold_2` |
+| `>HG002#1#chr1` (already PanSN) | first product | `>product_0001#0#chr1` (only the last `#` field is kept) |
 
-* `--mode single` names a nested variant with its ancestors, since it needs them: `var2` inside `var1` is
-  `var1+var2`, and an independent `var3` is just `var3`.
-* If the `+`-joined name would exceed 100 characters it is shortened to `n<COUNT>_<LAST_ID>`, for example
-  `n7_a_rather_long_variant_identifier_07` for a product with seven variants. In the default cumulative mode
-  that means the first 7 variants of the catalogue, ending in the named one. The shortened name is also what
-  `mangle.log` lists, so the mapping is not recorded anywhere else yet.
+* `--mode single` products include a nested variant's ancestors, since it needs them: the product for `var2` inside `var1` holds `var1,var2`.
 * Input contigs whose names collide after the PanSN prefix is stripped (`HG002#1#chr1` and `HG002#2#chr1`)
   are an error, since the output names would not be unique. Rename them first.
 
@@ -231,7 +226,7 @@ Options:
           How variants are combined into output sequences
 
           Possible values:
-          - cumulative: Ladder: original, v1, v1+v2, v1+v2+v3, ... (spec order; parents always precede children)
+          - cumulative: Ladder: unmodified input, v1, v1+v2, v1+v2+v3, ... (spec order; parents always precede children)
           - single:     Each variant on its own (plus its ancestors, since a nested variant needs its parent)
           
           [default: cumulative]

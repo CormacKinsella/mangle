@@ -5,7 +5,7 @@ use clap::ValueEnum;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 pub enum Mode {
-    /// Ladder: original, v1, v1+v2, v1+v2+v3, ... (spec order; parents always precede children).
+    /// Ladder: unmodified input, v1, v1+v2, v1+v2+v3, ... (spec order; parents always precede children).
     Cumulative,
     /// Each variant on its own (plus its ancestors, since a nested variant needs its parent).
     Single,
@@ -17,23 +17,10 @@ pub struct OutSet {
     pub active: Vec<bool>,
 }
 
-fn name_of(plan: &Plan, active: &[bool]) -> String {
-    let ids: Vec<&str> = plan
-        .nodes
-        .iter()
-        .zip(active)
-        .filter(|(_, a)| **a)
-        .map(|(n, _)| n.id.as_str())
-        .collect();
-    if ids.is_empty() {
-        return "original".into();
-    }
-    let joined = ids.join("+");
-    if joined.len() > 100 {
-        format!("n{}_{}", ids.len(), ids.last().unwrap())
-    } else {
-        joined
-    }
+/// `product_0000` is the unmodified input; the rest are `product_0001`, `product_0002`, ... in output order.
+/// Which variants each product holds is recorded in `products.tsv`.
+fn product_name(rank: usize, width: usize) -> String {
+    format!("product_{rank:0width$}")
 }
 
 pub fn build_sets(plan: &Plan, mode: Mode, drop_original: bool) -> Vec<OutSet> {
@@ -61,8 +48,17 @@ pub fn build_sets(plan: &Plan, mode: Mode, drop_original: bool) -> Vec<OutSet> {
         }
     }
     let mut seen = std::collections::HashSet::new();
+    let sets: Vec<Vec<bool>> = sets.into_iter().filter(|a| seen.insert(a.clone())).collect();
+    // Padding fits the total including `product_0000`, whether or not it is written (`--drop_input`), so the same
+    // spec gives the same file names either way and a rerun overwrites instead of leaving duplicates. Min 4 digits.
+    let width = (sets.iter().filter(|a| a.iter().any(|&x| x)).count() + 1).to_string().len().max(4);
+    let mut rank = 0;
     sets.into_iter()
-        .filter(|a| seen.insert(a.clone()))
-        .map(|active| OutSet { name: name_of(plan, &active), active })
+        .map(|active| {
+            if active.iter().any(|&x| x) {
+                rank += 1;
+            }
+            OutSet { name: product_name(rank, width), active }
+        })
         .collect()
 }

@@ -20,10 +20,10 @@ fn user_example_gives_three_then_two() {
     let plan = resolve(&parse_spec(INV_SNP).unwrap(), &refs, 7, 10).unwrap();
     let all = build_sets(&plan, Mode::Cumulative, false);
     let names: Vec<_> = all.iter().map(|s| s.name.as_str()).collect();
-    assert_eq!(names, ["original", "var1", "var1+var2"]);
+    assert_eq!(names, ["product_0000", "product_0001", "product_0002"]);
     let dropped = build_sets(&plan, Mode::Cumulative, true);
     assert_eq!(dropped.len(), 2);
-    assert_eq!(dropped[0].name, "var1");
+    assert_eq!(dropped[0].name, "product_0001");
 }
 
 #[test]
@@ -172,7 +172,7 @@ fn single_mode_includes_ancestors() {
     let refs = random_ref(2000, 1);
     let plan = resolve(&parse_spec("a inv 30 .\nb snp . a\nc del 10 .\n").unwrap(), &refs, 1, 10).unwrap();
     let names: Vec<_> = build_sets(&plan, Mode::Single, false).into_iter().map(|s| s.name).collect();
-    assert_eq!(names, ["original", "a", "a+b", "c"]);
+    assert_eq!(names, ["product_0000", "product_0001", "product_0002", "product_0003"]);
 }
 
 #[test]

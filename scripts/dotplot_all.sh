@@ -4,10 +4,10 @@
 set -euo pipefail
 indir=${1:?indir}; outdir=${2:?outdir}; window=${3:-7}
 mkdir -p "$outdir"
-# all.fa is the concatenation of every product, so skip it
+# combined.fa is the concatenation of every product, so skip it
 files=()
 for f in "$indir"/*.fa "$indir"/*.fasta "$indir"/*.fna; do
-    [[ -e $f && $(basename "$f") != all.* ]] && files+=("$f")
+    [[ -e $f && $(basename "$f") != combined.* ]] && files+=("$f")
 done
 n=${#files[@]}
 (( n >= 2 )) || { echo "need at least 2 fasta files in $indir" >&2; exit 1; }

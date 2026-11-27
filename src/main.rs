@@ -16,7 +16,7 @@ use std::path::PathBuf;
 ///   var1  inv        1000    .
 ///   var2  snp        1       var1
 ///
-/// gives three sequences by default: original, var1, var1+var2.
+/// gives three sequences by default: the unmodified input, var1, var1+var2.
 #[derive(Parser, Debug)]
 #[command(version, about, verbatim_doc_comment, before_help = concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION")))]
 struct Args {
@@ -115,6 +115,7 @@ fn main() -> Result<()> {
         &refs,
     )?;
 
+    truth::write_products(&mut BufWriter::new(File::create(a.outdir.join("products.tsv"))?), &plan, &refs, &sets)?;
     truth::write_bed(&mut BufWriter::new(File::create(a.outdir.join("variants.bed"))?), &plan, &refs)?;
 
     // Run log: exact command line, parameters, and md5 of the variant catalogue for provenance.

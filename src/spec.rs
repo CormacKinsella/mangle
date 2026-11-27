@@ -132,13 +132,13 @@ pub fn parse_spec_warn(text: &str) -> Result<(Vec<VarSpec>, Vec<String>)> {
             bail!("{}: id '{id}' may only contain [A-Za-z0-9_.-]", at());
         }
         if id.eq_ignore_ascii_case("original") || id.eq_ignore_ascii_case("combined") {
-            bail!("{}: '{id}' is reserved (original = unmodified sequence, combined = the --combined output file)", at());
+            bail!("{}: '{id}' is a reserved name (not allowed as a variant id)", at());
         }
         if out.len() >= crate::limits::MAX_VARIANTS {
             bail!("{}: more than {} variants in the spec", at(), crate::limits::MAX_VARIANTS);
         }
         if !ids.insert(id.to_ascii_lowercase()) {
-            bail!("{}: duplicate id '{id}' (ids are compared ignoring case)", at());
+            bail!("{}: duplicate id '{id}' (ids differing only by case count as duplicates)", at());
         }
         let kind = Kind::parse(f[1]).with_context(|| format!("{}: unknown type '{}'", at(), f[1]))?;
         let mut len = parse_len(f[2]).with_context(at)?;

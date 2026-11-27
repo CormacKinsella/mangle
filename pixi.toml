@@ -25,7 +25,7 @@ args = [
     { arg = "output" },
     { arg = "window_size", default = "7" }
 ]
-description = "Dotplot of two mangle products (one sequence each; a multi-record file only plots its first record). Usage: pixi run dotplot <input1.fa> <input2.fa> <output.png> [window_size], e.g. pixi run plotspecific outputs/original.fa outputs/var1.fa dotplot.png"
+description = "Dotplot of two mangle products (one sequence each; a multi-record file only plots its first record). Usage: pixi run plotspecific <input1.fa> <input2.fa> <output.svg> [window_size], e.g. pixi run plotspecific outputs/product_0000.fa outputs/product_0001.fa dotplot.svg"
 
 [tasks.plots]
 cmd = "bash scripts/dotplot_all.sh {{ input_dir }} {{ output_dir }} {{ window_size }}"
@@ -34,4 +34,12 @@ args = [
     { arg = "output_dir", default = "plots" },
     { arg = "window_size", default = "7" }
 ]
-description = "All pairwise dotplots between the product fastas in a mangle output dir (all.fa skipped). Usage: pixi run plots [input_dir=outputs] [output_dir=plots] [window_size=7]; writes <A>_vs_<B>.png"
+description = "All pairwise dotplots between the product fastas in a mangle output dir (combined.fa skipped). Usage: pixi run plots [input_dir=outputs] [output_dir=plots] [window_size=7]; writes <A>_vs_<B>.svg"
+
+[tasks.product_variants]
+cmd = "bash scripts/product_variants.sh {{ outdir }} {{ product }}"
+args = [
+    { arg = "outdir", default = "outputs" },
+    { arg = "product", default = "" }
+]
+description = "Full variant list of each product, from products.tsv + resolved_catalogue.tsv (works for id lists and ranges). Usage: pixi run product_variants [outdir=outputs] [product]; one id per line for a product, product<TAB>variant for all"

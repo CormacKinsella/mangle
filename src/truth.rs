@@ -5,8 +5,10 @@
 //! reference, not where it ends up after the reverse-complement). Variants inside inserted sequence have no
 //! reference coordinate and are omitted from the VCF (see resolved_catalogue.tsv, column ins_offset).
 
+use crate::apply::contig_len;
 use crate::io::Reference;
 use crate::plan::Plan;
+use crate::sets::OutSet;
 use crate::spec::Kind;
 use anyhow::Result;
 use std::io::Write;
@@ -120,4 +122,51 @@ pub fn write_bed(w: &mut impl Write, plan: &Plan, refs: &Reference) -> Result<()
         writeln!(w, "{}\t{}\t{}\t{}\t0\t.\t{}\t{}", refs.names[c], start, end, n.id, n.kind.name(), parent)?;
     }
     Ok(())
+}
+
+/// Most variants per product for which `products.tsv` lists ids; if any product has more, every row uses ranges.
+const MAX_LISTED_IDS: usize = 20;
+
+/// 1-based catalogue positions as ranges: `[1,2,3,7,9,10]` -> `1-3,7,9-10`.
+fn ranges(pos: &[usize]) -> String {
+    let mut out: Vec<String> = Vec::new();
+    let mut i = 0;
+    while i < pos.len() {
+        let mut j = i;
+        while j + 1 < pos.len() && pos[j + 1] == pos[j] + 1 {
+            j += 1;
+        }
+        out.push(if j == i { pos[i].to_string() } else { format!("{}-{}", pos[i], pos[j]) });
+        i = j + 1;
+    }
+    out.join(",")
+}
+
+/// Which variants each product contains. Ids when every product has at most `MAX_LISTED_IDS` variants,
+/// otherwise 1-based row numbers of `resolved_catalogue.tsv` as ranges (a cumulative ladder stays one range per row).
+pub fn write_products(w: &mut impl Write, plan: &Plan, refs: &Reference, sets: &[OutSet]) -> Result<()> {
+    let by_id = sets.iter().all(|s| s.active.iter().filter(|&&a| a).count() <= MAX_LISTED_IDS);
+    writeln!(w, "product\tn_variants\tlength\t{}", if by_id { "variants" } else { "variant_rows" })?;
+    for s in sets {
+        let rows: Vec<usize> = s.active.iter().enumerate().filter(|(_, a)| **a).map(|(i, _)| i + 1).collect();
+        let list = match (rows.is_empty(), by_id) {
+            (true, _) => ".".to_string(),
+            (false, true) => rows.iter().map(|&r| plan.nodes[r - 1].id.as_str()).collect::<Vec<_>>().join(","),
+            (false, false) => ranges(&rows),
+        };
+        let len: usize = (0..refs.names.len()).map(|c| contig_len(plan, refs, &s.active, c)).sum();
+        writeln!(w, "{}\t{}\t{}\t{}", s.name, rows.len(), len, list)?;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ranges;
+
+    #[test]
+    fn ranges_compress_runs() {
+        assert_eq!(ranges(&[1, 2, 3, 7, 9, 10]), "1-3,7,9-10");
+        assert_eq!(ranges(&[5]), "5");
+    }
 }

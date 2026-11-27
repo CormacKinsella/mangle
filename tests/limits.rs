@@ -120,7 +120,7 @@ fn cli_refuses_before_writing_anything() {
     assert!(String::from_utf8_lossy(&bad.stderr).contains("max_output_size"));
     assert!(!out.exists(), "nothing may be written when refused");
     assert!(run("1m").status.success());
-    assert!(out.join("original.fa").exists());
+    assert!(out.join("product_0000.fa").exists());
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
@@ -172,4 +172,21 @@ fn absurdly_long_variant_is_an_error_not_a_panic() {
             assert!(resolve(&s, &refs, 1, 10).is_err(), "{t}");
         }
     }
+}
+
+#[test]
+fn product_numbers_are_padded_to_fit_the_run() {
+    let refs = random_ref(200_000, 3);
+    let names = |n: usize, drop: bool| {
+        let spec: String = (1..=n).map(|i| format!("v{i} snp . .\n")).collect();
+        let plan = resolve(&parse_spec(&spec).unwrap(), &refs, 1, 0).unwrap();
+        build_sets(&plan, Mode::Cumulative, drop).into_iter().map(|s| s.name).collect::<Vec<_>>()
+    };
+    let small = names(3, false);
+    assert_eq!(small, ["product_0000", "product_0001", "product_0002", "product_0003"]);
+    assert_eq!(names(9998, false).last().unwrap(), "product_9998"); // 9999 products including product_0000: 4 digits
+    let edge = names(9999, false); // 10000 products including product_0000: 5 digits
+    assert_eq!((edge[0].as_str(), edge[9999].as_str()), ("product_00000", "product_09999"));
+    assert_eq!(names(9999, true)[0], "product_00001"); // same names with --drop_input, minus product_00000
+    assert_eq!(names(3, true)[0], "product_0001");
 }
