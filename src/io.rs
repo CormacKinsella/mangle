@@ -2,7 +2,7 @@
 
 use anyhow::{Context, Result, bail};
 use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::Path;
 
 /// Whole reference held in memory (case preserved). Outputs are streamed, so peak memory is
@@ -22,15 +22,32 @@ impl Reference {
     }
 }
 
+/// Longest single line accepted (decimal 2 GB). Unwrapped chromosomes are legitimate, but a file with no
+/// line breaks at all (e.g. a binary file renamed .fa) must not be read into memory as one line.
+pub const MAX_LINE_BYTES: usize = 2_000_000_000;
+
+/// Most records (contigs) accepted. Each record costs memory beyond its bytes, so a file of millions of tiny
+/// records would otherwise use many times its own size.
+pub const MAX_RECORDS: usize = 1_000_000;
+
 pub fn read_fasta(path: &Path) -> Result<Reference> {
+    read_fasta_with_limits(path, MAX_LINE_BYTES, MAX_RECORDS)
+}
+
+pub fn read_fasta_with_limits(path: &Path, max_line: usize, max_records: usize) -> Result<Reference> {
     let f = File::open(path).with_context(|| format!("opening {}", path.display()))?;
     let mut r = BufReader::with_capacity(1 << 20, f);
     let mut refs = Reference::default();
     let mut line = Vec::new();
+    let mut line_no = 0usize;
     loop {
         line.clear();
-        if r.read_until(b'\n', &mut line)? == 0 {
+        line_no += 1;
+        if r.by_ref().take(max_line as u64 + 1).read_until(b'\n', &mut line)? == 0 {
             break;
+        }
+        if line.len() > max_line {
+            bail!("{}: a line is longer than {} bytes; is this a FASTA file?", path.display(), max_line);
         }
         while matches!(line.last(), Some(b'\n' | b'\r')) {
             line.pop();
@@ -41,12 +58,22 @@ pub fn read_fasta(path: &Path) -> Result<Reference> {
             if name.is_empty() {
                 bail!("FASTA record with empty name");
             }
+            // fail at the first empty record instead of after reading the whole file
+            if refs.seqs.last().is_some_and(|q| q.is_empty()) {
+                bail!("{}: sequence '{}' is empty (a header with no sequence before the next header)", path.display(), refs.names.last().unwrap());
+            }
+            if refs.names.len() >= max_records {
+                bail!("{}: more than {max_records} sequences; is this a FASTA file?", path.display());
+            }
             refs.names.push(name);
             refs.seqs.push(Vec::new());
         } else if !line.is_empty() {
             match refs.seqs.last_mut() {
                 Some(s) => s.extend(line.iter().filter(|b| !b.is_ascii_whitespace())),
-                None => bail!("sequence data before first FASTA header"),
+                None => bail!(
+                    "{}: line {line_no} is not a valid FASTA header: the file must start with '>' followed by a name, but sequence data came first. Is this a FASTA file?",
+                    path.display()
+                ),
             }
         }
     }

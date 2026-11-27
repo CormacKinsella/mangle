@@ -5,10 +5,15 @@
 ### Added
 - `--max_output_size` (default `10g`, suffixes `k/m/g`): mangle works out how large the total FASTA output will be before writing anything, and stops with a clear message if it is over the limit. It counts every sequence written, including the unchanged input (unless `--drop_input`) and the extra `all.fa` copy from `--combined`. The estimate is printed at run time and recorded in `mangle.log`.
 - Per-variant size limits: a `cnv` may have at most 500 copies, and no single variant (`ins`, `dup`, `cnv`) may add more than 1 GB to the sequence.
+- Input FASTA lines longer than 2 GB are refused with a clear error instead of being read into memory (protects against non-FASTA files with no line breaks).
+- Input FASTA files with more than 1 million sequences are refused, and an empty record (a header with no sequence) is reported as soon as it is reached instead of after the whole file has been read.
 - A test that pins the exact output for a fixed seed, so a dependency upgrade that changes what a seed produces is caught.
 - Tests for the size estimate (it matches the bytes actually written) and for the limit itself.
 
 ### Fixed
+- A variant with an absurdly large length (e.g. a deletion of 18446744073709551615 bp) now gives an error instead of crashing.
+- A FASTA file that does not start with a `>` header now says so, with the line number, instead of a vague message.
+- A very large `--min_gap` now gives the normal "could not place variant" error instead of overflowing.
 - Very large sizes in the catalogue (for example `20000000000g`) now give an error instead of silently wrapping around.
 
 ## [0.1.0] - 2026-11-27

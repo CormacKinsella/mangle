@@ -172,7 +172,7 @@ fn place_top(
             c += 1;
         }
         let clen = refs.seqs[c].len();
-        if clen < fp + min_start {
+        if clen < fp.saturating_add(min_start) {
             continue;
         }
         let start = rng.gen_range(min_start..=clen - fp);
@@ -181,7 +181,7 @@ fn place_top(
         }
         if foot
             .iter()
-            .any(|&(fc, fs, fe)| fc == c && start < fe + min_gap && fs < start + fp + min_gap)
+            .any(|&(fc, fs, fe)| fc == c && start < fe.saturating_add(min_gap) && fs < (start + fp).saturating_add(min_gap))
         {
             continue;
         }
@@ -213,7 +213,7 @@ fn place_children(nodes: &mut Vec<Node>, p: usize, refs: &Reference, rng: &mut C
     if kids.is_empty() {
         return Ok(());
     }
-    let consumed: usize = kids.iter().map(|&k| nodes[k].span()).sum();
+    let consumed: usize = kids.iter().fold(0usize, |a, &k| a.saturating_add(nodes[k].span()));
     let plen = nodes[p].len;
     if consumed > plen {
         bail!(

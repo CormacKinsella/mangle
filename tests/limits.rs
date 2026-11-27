@@ -135,3 +135,41 @@ fn oversized_variants_are_rejected_regardless_of_seed() {
     assert!(parse_spec("a ins 1k-2g .\n").is_err(), "the top of a range counts, so the seed can't matter");
     assert!(parse_spec("a inv 5g .\n").is_ok(), "types that don't grow are not limited here");
 }
+
+#[test]
+fn overlong_line_is_refused_not_read() {
+    let dir = std::env::temp_dir().join(format!("mangle_line_test_{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let ok = dir.join("ok.fa");
+    let bad = dir.join("bad.fa");
+    std::fs::write(&ok, ">c\nACGTACGT\nACGT\n").unwrap();
+    std::fs::write(&bad, format!(">c\n{}\n", "A".repeat(100))).unwrap();
+    assert!(mangle::io::read_fasta_with_limits(&ok, 10, 5).is_ok());
+    let err = mangle::io::read_fasta_with_limits(&bad, 10, 5).unwrap_err().to_string();
+    assert!(err.contains("longer than"), "{err}");
+    let nohdr = dir.join("nohdr.fa");
+    std::fs::write(&nohdr, "ACGT\n>c\nACGT\n").unwrap();
+    let err = mangle::io::read_fasta(&nohdr).unwrap_err().to_string();
+    assert!(err.contains("not a valid FASTA header") && err.contains("line 1"), "{err}");
+    let empty = dir.join("empty.fa");
+    std::fs::write(&empty, ">a\n>b\nACGT\n").unwrap();
+    let err = mangle::io::read_fasta(&empty).unwrap_err().to_string();
+    assert!(err.contains("'a' is empty"), "{err}");
+    let many = dir.join("many.fa");
+    std::fs::write(&many, ">a\nA\n>b\nA\n>c\nA\n").unwrap();
+    assert!(mangle::io::read_fasta_with_limits(&many, 100, 2).is_err());
+    assert!(mangle::io::read_fasta_with_limits(&many, 100, 3).is_ok());
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn absurdly_long_variant_is_an_error_not_a_panic() {
+    let refs = random_ref(1000, 1);
+    for t in ["del", "ins", "inv"] {
+        let spec = parse_spec(&format!("a {t} 18446744073709551615 .\n")).ok();
+        // ins is refused earlier by the size limit; del/inv reach placement
+        if let Some(s) = spec {
+            assert!(resolve(&s, &refs, 1, 10).is_err(), "{t}");
+        }
+    }
+}
