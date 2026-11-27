@@ -1,6 +1,8 @@
 id	type	length	parent
 var1	inv	1000	.
 var2	del	400	var1
-var3	cnv	15	.	5
-var4	dup	50	.
-var5	inv	5	var4
+var3	dup	100	var1
+var4	cnv	25	.	5
+var5	dup	300	.
+var6	inv	50	var5
+var7	inv	30	var5

@@ -60,7 +60,7 @@ pub fn check_variant(kind: Kind, max_len: usize, copies: Option<usize>) -> Resul
 pub struct OutputShape {
     /// FASTA records written per contig for each product (1 now; the ploidy / haplotype count once supported).
     pub haplotypes_per_product: usize,
-    /// `--combined` writes every record a second time into all.fa.
+    /// `--combined` writes every record a second time into combined.fa.
     pub combined: bool,
     pub line_width: usize,
 }

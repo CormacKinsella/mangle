@@ -47,7 +47,7 @@ struct Args {
     #[arg(long)]
     vcf: bool,
 
-    /// Also write every output into one multi-sample FASTA (all.fa), e.g. for PGGB
+    /// Also write every output into one multi-sample FASTA (combined.fa), e.g. for PGGB
     #[arg(long)]
     combined: bool,
 
@@ -144,7 +144,7 @@ fn main() -> Result<()> {
     }
 
     let mut combined = if a.combined {
-        Some(BufWriter::new(File::create(a.outdir.join("all.fa"))?))
+        Some(BufWriter::new(File::create(a.outdir.join("combined.fa"))?))
     } else {
         None
     };
